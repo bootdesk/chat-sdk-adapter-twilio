@@ -338,13 +338,7 @@ class TwilioAdapter implements Adapter, MustRehydrateAttachments, RequiresSyncRe
             return $attachment;
         }
 
-        return new Attachment(
-            type: $this->attachmentType($attachment->mimeType),
-            url: $mediaUrl,
-            mimeType: $attachment->mimeType,
-            fetchData: [$this, 'fetchMedia'],
-            fetchMetadata: ['twilioMediaUrl' => $mediaUrl],
-        );
+        return $attachment->withFetchOptions(fetchData: [$this, 'fetchMedia'], fetchMetadata: ['twilioMediaUrl' => $mediaUrl]);
     }
 
     protected function renderPostableText(PostableMessage $message): string

@@ -13,6 +13,7 @@ use BootDesk\ChatSDK\Core\Contracts\FormatConverter;
 use BootDesk\ChatSDK\Core\Contracts\MustRehydrateAttachments;
 use BootDesk\ChatSDK\Core\Contracts\RequiresSyncResponse;
 use BootDesk\ChatSDK\Core\Exceptions\AdapterException;
+use BootDesk\ChatSDK\Core\Exceptions\UnsupportedOperationException;
 use BootDesk\ChatSDK\Core\FetchOptions;
 use BootDesk\ChatSDK\Core\FetchResult;
 use BootDesk\ChatSDK\Core\Message;
@@ -88,7 +89,7 @@ class TwilioAdapter implements Adapter, MustRehydrateAttachments, RequiresSyncRe
         $numMedia = (int) ($params['NumMedia'] ?? 0);
 
         if ($from === '' || $to === '') {
-            return $this->emptyMessage($body);
+            throw new UnsupportedOperationException('Twilio webhook is not a message — likely a status callback');
         }
 
         $threadId = $this->encodeThreadId([
@@ -575,19 +576,5 @@ class TwilioAdapter implements Adapter, MustRehydrateAttachments, RequiresSyncRe
             'body' => $data,
             'status' => $statusCode,
         ];
-    }
-
-    private function emptyMessage(string $rawBody): Message
-    {
-        return new Message(
-            id: '',
-            threadId: '',
-            author: new Author(id: '', isMe: true),
-            text: '',
-            formatted: $this->formatConverter->toAst(''),
-            isMention: false,
-            isDM: false,
-            raw: $rawBody,
-        );
     }
 }

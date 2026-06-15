@@ -6,6 +6,7 @@ use BootDesk\ChatSDK\Core\Attachment;
 use BootDesk\ChatSDK\Core\Chat;
 use BootDesk\ChatSDK\Core\Contracts\MustRehydrateAttachments;
 use BootDesk\ChatSDK\Core\Exceptions\AdapterException;
+use BootDesk\ChatSDK\Core\Exceptions\UnsupportedOperationException;
 use BootDesk\ChatSDK\Core\Message;
 use BootDesk\ChatSDK\Core\PostableMessage;
 use BootDesk\ChatSDK\Twilio\TwilioAdapter;
@@ -542,6 +543,8 @@ class TwilioAdapterTest extends TestCase
 
     public function test_returns_empty_message_for_non_text_webhook(): void
     {
+        $this->expectException(UnsupportedOperationException::class);
+
         $request = $this->factory->createServerRequest('POST', '/webhooks/twilio')
             ->withHeader('Content-Type', 'application/x-www-form-urlencoded')
             ->withBody($this->factory->createStream(http_build_query([
@@ -549,10 +552,7 @@ class TwilioAdapterTest extends TestCase
                 'MessageSid' => 'SM123',
             ])));
 
-        $message = $this->adapter->parseWebhook($request);
-
-        $this->assertSame('', $message->threadId);
-        $this->assertSame('', $message->text);
+        $this->adapter->parseWebhook($request);
     }
 
     public function test_post_message_with_no_body_and_no_media_throws(): void

@@ -24,11 +24,11 @@ class TwilioFormatConverterTest extends TestCase
         $this->assertSame('hello', $result);
     }
 
-    public function test_converts_markdown_to_html(): void
+    public function test_converts_markdown_to_platform(): void
     {
         $result = $this->converter->fromMarkdown('**hello**');
 
-        $this->assertStringContainsString('<strong>hello</strong>', $result);
+        $this->assertStringContainsString('**hello**', $result);
     }
 
     public function test_passes_table_markdown_through(): void

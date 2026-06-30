@@ -162,6 +162,24 @@ class TwilioAdapter implements Adapter, MustRehydrateAttachments, RequiresSyncRe
     {
         $decoded = $this->decodeThreadId($threadId);
 
+        // Location fallback — no native outgoing support, append maps link to text
+        if ($message->attachments !== [] && $message->attachments[0]->type === 'location') {
+            $att = $message->attachments[0];
+            $locText = "https://www.google.com/maps?q={$att->lat},{$att->lng}";
+            if ($att->name !== null) {
+                $locText = $att->name."\n".$locText;
+            }
+            if ($att->address !== null) {
+                $locText .= "\n".$att->address;
+            }
+            $originalText = $this->renderPostableText($message);
+            $mergedText = $originalText !== '' ? $originalText."\n\n".$locText : $locText;
+            $message = new PostableMessage(
+                content: $mergedText,
+                replyToMessageId: $message->replyToMessageId,
+            );
+        }
+
         $body = $this->renderPostableText($message);
         $mediaUrls = $this->mediaUrls($message);
 

@@ -26,6 +26,8 @@ use Psr\Http\Client\ClientInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\StreamInterface;
+use Psr\Log\LoggerInterface;
+use Psr\Log\NullLogger;
 
 class TwilioAdapter implements Adapter, MustRehydrateAttachments, RequiresSyncResponse
 {
@@ -39,6 +41,8 @@ class TwilioAdapter implements Adapter, MustRehydrateAttachments, RequiresSyncRe
 
     protected ?Chat $chat = null;
 
+    protected readonly LoggerInterface $logger;
+
     public function __construct(
         protected readonly string $accountSid,
         protected readonly string $authToken,
@@ -49,9 +53,11 @@ class TwilioAdapter implements Adapter, MustRehydrateAttachments, RequiresSyncRe
         protected readonly ?string $statusCallbackUrl = null,
         protected readonly ?Psr17Factory $psrFactory = null,
         protected readonly string $apiUrl = 'https://api.twilio.com',
+        ?LoggerInterface $logger = null,
     ) {
         $this->formatConverter = new TwilioFormatConverter;
         $this->webhookVerifier = new TwilioWebhookVerifier($authToken);
+        $this->logger = $logger ?? new NullLogger;
     }
 
     public function getName(): string
@@ -115,6 +121,14 @@ class TwilioAdapter implements Adapter, MustRehydrateAttachments, RequiresSyncRe
         }
 
         $messageId = $messageSid ?? 'twilio:'.time();
+
+        $this->logger->info('[Twilio] Message parsed', [
+            'from' => $from,
+            'to' => $to,
+            'text_preview' => mb_substr($text, 0, 100),
+            'numMedia' => $numMedia,
+            'body' => mb_substr($body, 0, 500),
+        ]);
 
         return new Message(
             id: $messageId,
@@ -207,6 +221,12 @@ class TwilioAdapter implements Adapter, MustRehydrateAttachments, RequiresSyncRe
         $raw = $this->apiCall('POST', 'Messages.json', $params);
 
         $resource = $raw['body'] ?? [];
+
+        $this->logger->info('[Twilio] Message sent', [
+            'threadId' => $threadId,
+            'sid' => $resource['sid'] ?? '',
+            'text_preview' => mb_substr($body, 0, 100),
+        ]);
 
         return new SentMessage(
             id: $resource['sid'] ?? '',
@@ -573,6 +593,12 @@ class TwilioAdapter implements Adapter, MustRehydrateAttachments, RequiresSyncRe
 
         $response = $this->httpClient->sendRequest($request);
         $statusCode = $response->getStatusCode();
+
+        $this->logger->debug('[Twilio] API call', [
+            'method' => $method,
+            'path' => $path ?? $overrideUrl,
+            'status' => $statusCode,
+        ]);
 
         if ($statusCode < 200 || $statusCode >= 300) {
             $responseBody = (string) $response->getBody();
